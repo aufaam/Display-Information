@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Display Antrian</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      height: 100vh;
+    }
+    .nomor {
+      font-size: 6em;
+      font-weight: bold;
+    }
+    .loket {
+      font-size: 3em;
+      margin-top: 0.2em;
+    }
+    .poli {
+      font-size: 1.5em;
+      margin-top: 1em;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+  <div class="nomor" id="nomor">Memuat...</div>
+  <div class="loket" id="loket"></div>
+  <div class="poli" id="poli"></div>
+
+  <script>
+    const endpoint = "PASTE_WEB_APP_URL_DI_SINI";
+    let index = 0;
+    let data = [];
+
+    async function ambilData() {
+      try {
+        const res = await fetch(endpoint);
+        data = await res.json();
+      } catch (err) {
+        document.getElementById("nomor").innerText = "Gagal memuat";
+        console.error("Gagal ambil data:", err);
+      }
+    }
+
+    function tampilkanData() {
+      if (!data.length) return;
+      const item = data[index];
+      document.getElementById("nomor").innerText = `Nomor: ${item.Nomor || '-'}`;
+      document.getElementById("loket").innerText = `Loket: ${item.Loket || '-'}`;
+      document.getElementById("poli").innerText = `Sumber: ${item.source}`;
+
+      index = (index + 1) % data.length;
+    }
+
+    async function mulai() {
+      await ambilData();
+      tampilkanData();
+      setInterval(tampilkanData, 5000); // Ganti data tiap 5 detik
+      setInterval(ambilData, 15000);    // Refresh data dari spreadsheet tiap 15 detik
+    }
+
+    mulai();
+  </script>
+</body>
+</html>
