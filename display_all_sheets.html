@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Display Monitoring - Spreadsheet</title>
+  <style>
+    body {
+      background-color: #111;
+      color: #fff;
+      font-family: sans-serif;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    h1 {
+      font-size: 2em;
+      margin-bottom: 1rem;
+    }
+    table {
+      border-collapse: collapse;
+      width: 90vw;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    th, td {
+      border: 1px solid #444;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    th {
+      background-color: #222;
+      position: sticky;
+      top: 0;
+    }
+    .done {
+      background-color: #2e7d32; /* green */
+      color: white;
+    }
+    .notyet {
+      background-color: #c62828; /* red */
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1 id="judul">Memuat...</h1>
+  <div id="tabel-container"></div>
+
+  <script>
+    const endpoint = "PASTE_WEBAPP_URL_DISINI";
+    let dataPerSheet = {};
+    let sheetNames = [];
+    let currentSheetIndex = 0;
+
+    async function fetchData() {
+      const res = await fetch(endpoint);
+      const allData = await res.json();
+
+      // Kelompokkan berdasarkan sheet
+      dataPerSheet = {};
+      allData.forEach(item => {
+        const sheet = item.source;
+        if (!dataPerSheet[sheet]) dataPerSheet[sheet] = [];
+        dataPerSheet[sheet].push(item);
+      });
+      sheetNames = Object.keys(dataPerSheet);
+    }
+
+    function tampilkanSheet(sheetName) {
+      const container = document.getElementById("tabel-container");
+      const judul = document.getElementById("judul");
+      const data = dataPerSheet[sheetName];
+      if (!data || data.length === 0) return;
+
+      judul.innerText = sheetName;
+      let html = "<table><thead><tr>";
+      const headers = Object.keys(data[0]).filter(k => k !== "source");
+      headers.forEach(h => html += `<th>${h}</th>`);
+      html += "</tr></thead><tbody>";
+
+      data.forEach(row => {
+        html += "<tr>";
+        headers.forEach(key => {
+          let val = row[key] || "";
+          let kelas = "";
+          if (typeof val === 'string') {
+            const v = val.toLowerCase();
+            if (v === "done") kelas = "done";
+            else if (v === "not yet") kelas = "notyet";
+          }
+          html += `<td class="${kelas}">${val}</td>`;
+        });
+        html += "</tr>";
+      });
+      html += "</tbody></table>";
+
+      container.innerHTML = html;
+    }
+
+    async function mulai() {
+      await fetchData();
+      tampilkanSheet(sheetNames[currentSheetIndex]);
+      setInterval(() => {
+        currentSheetIndex = (currentSheetIndex + 1) % sheetNames.length;
+        tampilkanSheet(sheetNames[currentSheetIndex]);
+      }, 10000); // Ganti sheet setiap 10 detik
+    }
+
+    mulai();
+  </script>
+</body>
+</html>
