@@ -2,69 +2,112 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Display Antrian</title>
+  <title>Display Monitoring - Spreadsheet</title>
   <style>
     body {
-      margin: 0;
-      background-color: #000;
+      background-color: #111;
       color: #fff;
-      font-family: Arial, sans-serif;
-      text-align: center;
+      font-family: sans-serif;
+      margin: 0;
       display: flex;
       flex-direction: column;
+      align-items: center;
       justify-content: center;
       height: 100vh;
+      overflow: hidden;
     }
-    .nomor {
-      font-size: 6em;
-      font-weight: bold;
+    h1 {
+      font-size: 2em;
+      margin-bottom: 1rem;
     }
-    .loket {
-      font-size: 3em;
-      margin-top: 0.2em;
+    table {
+      border-collapse: collapse;
+      width: 90vw;
+      max-height: 80vh;
+      overflow-y: auto;
     }
-    .poli {
-      font-size: 1.5em;
-      margin-top: 1em;
-      color: #aaa;
+    th, td {
+      border: 1px solid #444;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    th {
+      background-color: #222;
+      position: sticky;
+      top: 0;
+    }
+    .done {
+      background-color: #2e7d32; /* green */
+      color: white;
+    }
+    .notyet {
+      background-color: #c62828; /* red */
+      color: white;
     }
   </style>
 </head>
 <body>
-  <div class="nomor" id="nomor">Memuat...</div>
-  <div class="loket" id="loket"></div>
-  <div class="poli" id="poli"></div>
+  <h1 id="judul">Memuat...</h1>
+  <div id="tabel-container"></div>
 
   <script>
-    const endpoint = "PASTE_WEB_APP_URL_DI_SINI";
-    let index = 0;
-    let data = [];
+    const endpoint = "https://script.google.com/macros/s/AKfycbyk39fF8d8BXADY2BPJL_N8ZCEXYuQWkOka1pD27L01GgT_Kc-b_0-Zd6TlcWqEiN7XPQ/exec";
+    let dataPerSheet = {};
+    let sheetNames = [];
+    let currentSheetIndex = 0;
 
-    async function ambilData() {
-      try {
-        const res = await fetch(endpoint);
-        data = await res.json();
-      } catch (err) {
-        document.getElementById("nomor").innerText = "Gagal memuat";
-        console.error("Gagal ambil data:", err);
-      }
+    async function fetchData() {
+      const res = await fetch(endpoint);
+      const allData = await res.json();
+
+      // Kelompokkan berdasarkan sheet
+      dataPerSheet = {};
+      allData.forEach(item => {
+        const sheet = item.source;
+        if (!dataPerSheet[sheet]) dataPerSheet[sheet] = [];
+        dataPerSheet[sheet].push(item);
+      });
+      sheetNames = Object.keys(dataPerSheet);
     }
 
-    function tampilkanData() {
-      if (!data.length) return;
-      const item = data[index];
-      document.getElementById("nomor").innerText = `Nomor: ${item.Nomor || '-'}`;
-      document.getElementById("loket").innerText = `Loket: ${item.Loket || '-'}`;
-      document.getElementById("poli").innerText = `Sumber: ${item.source}`;
+    function tampilkanSheet(sheetName) {
+      const container = document.getElementById("tabel-container");
+      const judul = document.getElementById("judul");
+      const data = dataPerSheet[sheetName];
+      if (!data || data.length === 0) return;
 
-      index = (index + 1) % data.length;
+      judul.innerText = sheetName;
+      let html = "<table><thead><tr>";
+      const headers = Object.keys(data[0]).filter(k => k !== "source");
+      headers.forEach(h => html += `<th>${h}</th>`);
+      html += "</tr></thead><tbody>";
+
+      data.forEach(row => {
+        html += "<tr>";
+        headers.forEach(key => {
+          let val = row[key] || "";
+          let kelas = "";
+          if (typeof val === 'string') {
+            const v = val.toLowerCase();
+            if (v === "done") kelas = "done";
+            else if (v === "not yet") kelas = "notyet";
+          }
+          html += `<td class="${kelas}">${val}</td>`;
+        });
+        html += "</tr>";
+      });
+      html += "</tbody></table>";
+
+      container.innerHTML = html;
     }
 
     async function mulai() {
-      await ambilData();
-      tampilkanData();
-      setInterval(tampilkanData, 5000); // Ganti data tiap 5 detik
-      setInterval(ambilData, 15000);    // Refresh data dari spreadsheet tiap 15 detik
+      await fetchData();
+      tampilkanSheet(sheetNames[currentSheetIndex]);
+      setInterval(() => {
+        currentSheetIndex = (currentSheetIndex + 1) % sheetNames.length;
+        tampilkanSheet(sheetNames[currentSheetIndex]);
+      }, 10000); // Ganti sheet setiap 10 detik
     }
 
     mulai();
